@@ -11,3 +11,4 @@ passlib[bcrypt]
 python-multipart
 requests
 pytest
+python-json-logger
