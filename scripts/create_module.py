@@ -106,27 +106,37 @@ class {{name}}(Base):
 {% for field in fields %}
     {{field.name}} = Column({{field.type}}{% if field.length %}({{field.length}}){% endif %}{% if field.nullable %}, nullable=True{% endif %})
 {% endfor %}
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), 
+        server_default=func.now(),
+        nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
 ''',
 
-    "schema": '''{% set imports = [] %}
+    "schema": '''{% set imports = [] -%}
 from typing import Optional
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
-{% for field in fields %}
-{% set type_info = get_pydantic_type(field.type) %}
-{% if type_info[1] and type_info[1] not in imports %}
+{%- for field in fields %}
+{%- set type_info = get_pydantic_type(field.type) %}
+{%- if type_info[1] and type_info[1] not in imports %}
 {{ type_info[1] }}
-{% set _ = imports.append(type_info[1]) %}
-{% endif %}
-{% endfor %}
+{%- set _ = imports.append(type_info[1]) %}
+{%- endif %}
+{%- endfor %}
 
 class {{name}}Base(BaseModel):
     """Base schema for {{name}}"""
-{% for field in fields %}
-    {% set type_info = get_pydantic_type(field.type) %}
+{%- for field in fields %}
+    {%- set type_info = get_pydantic_type(field.type) %}
     {{field.name}}: {% if field.nullable %}Optional[{{type_info[0]}}]{% else %}{{type_info[0]}}{% endif %}{{ generate_field_validation(field) }}
-{% endfor %}
+{%- endfor %}
 
 class {{name}}Create({{name}}Base):
     """Schema for creating a new {{name}}"""
@@ -134,14 +144,14 @@ class {{name}}Create({{name}}Base):
 
 class {{name}}Update(BaseModel):
     """Schema for updating an existing {{name}}"""
-{% for field in fields %}
-    {% set type_info = get_pydantic_type(field.type) %}
+{%- for field in fields %}
+    {%- set type_info = get_pydantic_type(field.type) %}
     {{field.name}}: Optional[{{type_info[0]}}] = None
-{% endfor %}
+{%- endfor %}
 
     model_config = ConfigDict(from_attributes=True)
 
-class {{name}}Response({{name}}Base):
+class {{name}}InDB({{name}}Base):
     """Schema for {{name}} response"""
     id: int
     created_at: datetime
@@ -159,25 +169,7 @@ from app.schemas.{{snake_name}} import {{name}}Create, {{name}}Update
 class {{name}}Repository(BaseRepository[{{name}}, {{name}}Create, {{name}}Update]):
     """Repository for {{name}} model with custom methods"""
     
-    async def search_by_field(self, field: str, value: Any) -> List[{{name}}]:
-        """Search {{name}} by specific field"""
-        stmt = select(self.model).where(getattr(self.model, field) == value)
-        result = await self.db.execute(stmt)
-        return result.scalars().all()
-
-    async def get_active(self, skip: int = 0, limit: int = 10) -> Tuple[List[{{name}}], int]:
-        """Get all active records"""
-        stmt = select(self.model).where(self.model.status == True)
-        
-        # Get total count
-        count_stmt = select(func.count()).select_from(stmt)
-        total = await self.db.scalar(count_stmt)
-        
-        # Get paginated results
-        stmt = stmt.offset(skip).limit(limit)
-        result = await self.db.execute(stmt)
-        
-        return result.scalars().all(), total
+    pass
 ''',
 
     "service": '''from typing import Optional, List, Tuple
@@ -219,33 +211,29 @@ class {{name}}Service:
         if not await self.repository.delete(id=id):
             raise APIError(f"{{name}} with id {id} not found", status_code=404)
         return True
-
-    async def search_by_field(self, field: str, value: Any) -> List[{{name}}]:
-        """Search {{name}} by specific field"""
-        return await self.repository.search_by_field(field, value)
 ''',
 
     "endpoint": '''from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from app.services.{{snake_name}} import {{name}}Service
-from app.schemas.{{snake_name}} import {{name}}, {{name}}Create, {{name}}Update
+from app.schemas.{{snake_name}} import {{name}}InDB, {{name}}Create, {{name}}Update
 from app.utils.response_handler import response
 from app.schemas.response import StandardResponse
 
 router = APIRouter()
 
-@router.post("/", response_model=StandardResponse[{{name}}])
+@router.post("/", response_model=StandardResponse[{{name}}InDB])
 async def create_{{snake_name}}(
     schema: {{name}}Create,
     service: {{name}}Service = Depends()
 ):
     item = await service.create(schema)
     return response.success(
-        data={{name}}.model_validate(item),
+        data={{name}}InDB.model_validate(item),
         message="{{name}} created successfully"
     )
 
-@router.get("/", response_model=StandardResponse[list[{{name}}]])
+@router.get("/", response_model=StandardResponse[list[{{name}}InDB]])
 async def get_{{snake_name}}s(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
@@ -253,7 +241,7 @@ async def get_{{snake_name}}s(
 ):
     items, total = await service.get_multi(skip=skip, limit=limit)
     return response.success(
-        data=[{{name}}.model_validate(item) for item in items],
+        data=[{{name}}InDB.model_validate(item) for item in items],
         message="{{name}}s retrieved successfully",
         meta={
             "skip": skip,
@@ -262,18 +250,18 @@ async def get_{{snake_name}}s(
         }
     )
 
-@router.get("/{id}", response_model=StandardResponse[{{name}}])
+@router.get("/{id}", response_model=StandardResponse[{{name}}InDB])
 async def get_{{snake_name}}(
     id: int,
     service: {{name}}Service = Depends()
 ):
     item = await service.get(id)
     return response.success(
-        data={{name}}.model_validate(item),
+        data={{name}}InDB.model_validate(item),
         message="{{name}} retrieved successfully"
     )
 
-@router.put("/{id}", response_model=StandardResponse[{{name}}])
+@router.put("/{id}", response_model=StandardResponse[{{name}}InDB])
 async def update_{{snake_name}}(
     id: int,
     schema: {{name}}Update,
@@ -281,7 +269,7 @@ async def update_{{snake_name}}(
 ):
     item = await service.update(id, schema)
     return response.success(
-        data={{name}}.model_validate(item),
+        data={{name}}InDB.model_validate(item),
         message="{{name}} updated successfully"
     )
 
