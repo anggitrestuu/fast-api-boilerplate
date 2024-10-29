@@ -14,3 +14,4 @@ pytest
 python-json-logger
 asyncpg
 python-dateutil
+jinja2

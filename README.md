@@ -411,3 +411,15 @@ DEBUG=False
 ## Support
 
 For support, please open an issue in the repository or contact the maintainers.
+
+# Basic usage
+
+python scripts/generate_crud.py Product -f "name:String" -f "price:Float" -f "description:Text:true"
+
+# More complex example
+
+python scripts/generate_crud.py Category \
+ -f "name:String:false:100" \
+ -f "description:Text:true" \
+ -f "is_active:Boolean:false" \
+ -f "parent_id:Integer:true"
