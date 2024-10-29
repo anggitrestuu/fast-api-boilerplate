@@ -178,7 +178,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.repositories.{{snake_name}} import {{name}}Repository
 from app.models.{{snake_name}} import {{name}}
-from app.schemas.{{snake_name}} import {{name}}Create, {{name}}Update, {{name}}Response
+from app.schemas.{{snake_name}} import {{name}}Create, {{name}}Update
 from app.core.exceptions import APIError
 
 class {{name}}Service:
