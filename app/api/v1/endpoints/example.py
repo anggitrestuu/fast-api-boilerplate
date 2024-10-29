@@ -1,6 +1,6 @@
 # app/api/v1/endpoints/example.py
 from fastapi import APIRouter, Depends
-from app.utils.response_handler import success_response, error_response
+from app.utils.response_handler import response
 from app.core.exceptions import APIError
 from app.schemas.response import Error
 
@@ -9,7 +9,7 @@ router = APIRouter()
 @router.get("/success-example")
 async def success_example():
     data = {"key": "value"}
-    return success_response(
+    return response.success(
         data=data,
         message="Data retrieved successfully",
         meta={"total": 1}
@@ -18,7 +18,7 @@ async def success_example():
 @router.get("/error-example")
 async def error_example():
     # Using error_response directly
-    return error_response(
+    return response.error(
         message="Something went wrong",
         errors=[
             Error(code="INVALID_INPUT", message="Invalid input provided", field="field_name")
