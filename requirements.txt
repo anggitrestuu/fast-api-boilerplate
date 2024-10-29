@@ -12,4 +12,4 @@ python-multipart
 requests
 pytest
 python-json-logger
-# pip install psycopg2-binary
+asyncpg

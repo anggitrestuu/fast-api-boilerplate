@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     DATABASE_URL: str
     ENVIRONMENT: str
+    DEBUG : bool = True
 
     class Config:
         env_file = ".env"

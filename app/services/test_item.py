@@ -1,44 +1,34 @@
-from typing import Optional
 from fastapi import Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.repositories.test_item import TestItemRepository
+from app.models.test_item import TestItem
 from app.schemas.test_item import TestItemCreate, TestItemUpdate
-from app.utils.pagination import PaginationParams
 from app.core.exceptions import APIError
 
 class TestItemService:
-    def __init__(self, db: Session = Depends(get_db)):
-        self.repository = TestItemRepository(db)
+    def __init__(self, db: AsyncSession = Depends(get_db)):
+        self.repository = TestItemRepository(TestItem, db)
 
-    def create_item(self, item_in: TestItemCreate):
-        return self.repository.create(item_in)
+    async def create(self, schema: TestItemCreate):
+        return await self.repository.create(schema)
 
-    def get_item(self, item_id: int):
-        item = self.repository.get_by_id(item_id)
+    async def get(self, id: int):
+        item = await self.repository.get(id)
         if not item:
-            raise APIError(
-                message=f"Item with id {item_id} not found",
-                status_code=404
-            )
+            raise APIError(f"Test item with id {id} not found", status_code=404)
         return item
 
-    def get_items(self, params: PaginationParams):
-        return self.repository.get_all(params)
+    async def get_multi(self, skip: int = 0, limit: int = 10, filters: dict = None):
+        return await self.repository.get_multi(skip=skip, limit=limit, filters=filters)
 
-    def update_item(self, item_id: int, item_in: TestItemUpdate):
-        item = self.repository.update(item_id, item_in)
+    async def update(self, id: int, schema: TestItemUpdate):
+        item = await self.repository.update(id=id, schema=schema)
         if not item:
-            raise APIError(
-                message=f"Item with id {item_id} not found",
-                status_code=404
-            )
+            raise APIError(f"Test item with id {id} not found", status_code=404)
         return item
 
-    def delete_item(self, item_id: int):
-        if not self.repository.delete(item_id):
-            raise APIError(
-                message=f"Item with id {item_id} not found",
-                status_code=404
-            )
+    async def delete(self, id: int):
+        if not await self.repository.delete(id=id):
+            raise APIError(f"Test item with id {id} not found", status_code=404)
         return True

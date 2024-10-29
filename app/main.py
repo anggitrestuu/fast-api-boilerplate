@@ -11,7 +11,7 @@ from app.core.exceptions import (
     sqlalchemy_error_handler
 )
 from app.api.v1.router import api_router
-from app.utils.response_handler import success_response
+# from app.utils.response_handler import success_response
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.audit import AuditLogMiddleware
 
@@ -41,12 +41,12 @@ def create_application() -> FastAPI:
     # Add routers
     application.include_router(api_router, prefix=settings.API_V1_STR)
 
-    @application.get("/health")
-    async def health_check():
-        return success_response(
-            data={"status": "healthy"},
-            message="Service is healthy"
-        )
+    # @application.get("/health")
+    # async def health_check():
+    #     return success_response(
+    #         data={"status": "healthy"},
+    #         message="Service is healthy"
+    #     )
 
     return application
 

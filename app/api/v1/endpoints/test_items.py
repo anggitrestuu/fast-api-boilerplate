@@ -1,69 +1,70 @@
+# app/api/v1/endpoints/test_items.py
+from fastapi import APIRouter, Depends, Query
 from typing import Optional
-from fastapi import APIRouter, Depends
 from app.services.test_item import TestItemService
-from app.schemas.test_item import TestItem, TestItemCreate, TestItemUpdate
-from app.utils.pagination import PaginationParams
-from app.utils.response_handler import success_response
+from app.schemas.test_item import TestItemInDB, TestItemCreate, TestItemUpdate
+from app.utils.response_handler import response
 
 router = APIRouter()
 
-@router.post("/", response_model=TestItem)
+@router.post("/", response_model=TestItemInDB)
 async def create_item(
-    item_in: TestItemCreate,
+    schema: TestItemCreate,
     service: TestItemService = Depends()
 ):
-    item = service.create_item(item_in)
-    return success_response(
-        data=item,
-        message="Item created successfully"
+    item = await service.create(schema)
+    return response.success(
+        data=TestItemInDB.model_validate(item),
+        message="Test item created successfully"
     )
 
-@router.get("/{item_id}", response_model=TestItem)
-async def get_item(
-    item_id: int,
-    service: TestItemService = Depends()
-):
-    item = service.get_item(item_id)
-    return success_response(
-        data=item,
-        message="Item retrieved successfully"
-    )
-
-@router.get("/")
+@router.get("/", response_model=list[TestItemInDB])
 async def get_items(
-    pagination: PaginationParams = Depends(),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    status: Optional[bool] = None,
     service: TestItemService = Depends()
 ):
-    result = service.get_items(pagination)
-    return success_response(
-        data=result.items,
-        message="Items retrieved successfully",
+    items, total = await service.get_multi(skip=skip, limit=limit, filters={"status": status})
+    
+    return response.success(
+        data=[TestItemInDB.model_validate(item) for item in items],
+        message="Test items retrieved successfully",
         meta={
-            "page": result.page,
-            "per_page": result.page_size,
-            "total": result.total,
-            "total_pages": result.total_pages
+            "page": skip // limit + 1,
+            "per_page": limit,
+            "total": total,
+            "total_pages": (total + limit - 1) // limit
         }
     )
 
-@router.put("/{item_id}", response_model=TestItem)
-async def update_item(
-    item_id: int,
-    item_in: TestItemUpdate,
+@router.get("/{id}", response_model=TestItemInDB)
+async def get_item(
+    id: int,
     service: TestItemService = Depends()
 ):
-    item = service.update_item(item_id, item_in)
-    return success_response(
-        data=item,
-        message="Item updated successfully"
+    item = await service.get(id)
+    return response.success(
+        data=TestItemInDB.model_validate(item),
+        message="Test item retrieved successfully"
     )
 
-@router.delete("/{item_id}")
-async def delete_item(
-    item_id: int,
+@router.put("/{id}", response_model=TestItemInDB)
+async def update_item(
+    id: int,
+    schema: TestItemUpdate,
     service: TestItemService = Depends()
 ):
-    service.delete_item(item_id)
-    return success_response(
-        message="Item deleted successfully"
+    item = await service.update(id, schema)
+    return response.success(
+        data=TestItemInDB.model_validate(item),
+        message="Test item updated successfully"
     )
+
+@router.delete("/{id}")
+async def delete_item(
+    id: int,
+    service: TestItemService = Depends()
+):
+    await service.delete(id)
+    return response.success(message="Test item deleted successfully")

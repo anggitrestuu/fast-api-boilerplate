@@ -1,27 +1,23 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
-# Shared properties
 class TestItemBase(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = None
     status: bool = True
 
-# Properties to receive on item creation
 class TestItemCreate(TestItemBase):
     pass
 
-# Properties to receive on item update
 class TestItemUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = None
     status: Optional[bool] = None
 
-# Properties to return to client
-class TestItem(TestItemBase):
+class TestItemInDB(TestItemBase):
     id: int
     created_at: datetime
+    updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
