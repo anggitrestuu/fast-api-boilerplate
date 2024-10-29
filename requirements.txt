@@ -13,3 +13,4 @@ requests
 pytest
 python-json-logger
 asyncpg
+python-dateutil
