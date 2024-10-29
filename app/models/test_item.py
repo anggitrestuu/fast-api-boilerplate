@@ -10,3 +10,5 @@ class TestItem(Base):
     description = Column(Text, nullable=True)
     status = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+        # Add new field
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
