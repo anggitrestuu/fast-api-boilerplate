@@ -1,103 +1,55 @@
-# FastAPI Module Generator
+# Credit Forge
 
-A CLI tool for generating and deleting CRUD modules in your FastAPI application.
+Credit Forge is a sophisticated credit management system for AI model usage, providing robust tracking, billing, and usage management capabilities.
 
-## Field Type Mappings
+## 🚀 Features
 
-SQLAlchemy to Pydantic type mappings:
+- **Authentication & User Management**
 
-| SQLAlchemy Type | Pydantic Type | Validation |
-| --------------- | ------------- | ---------- |
-| String          | str           | max_length |
-| Text            | str           | None       |
-| Integer         | int           | ge=0       |
-| Float           | float         | ge=0.0     |
-| Boolean         | bool          | None       |
-| DateTime        | datetime      | None       |
-| JSON            | dict          | None       |
-| ARRAY           | List          | None       |
-| Numeric         | Decimal       | ge=0.0     |
-| UUID            | UUID          | None       |
+  - Multi-tenant user system
+  - Session management
+  - Role-based access control
 
-## Best Practices
+- **Organization Management**
 
-1. **Naming Conventions**:
+  - Multi-organization support
+  - Team member management
+  - Role-based permissions
 
-   - Use CamelCase for module names (e.g., UserProfile)
-   - Use snake_case for field names (e.g., first_name)
+- **Credit System**
 
-2. **Field Types**:
+  - Credit balance management
+  - Usage-based billing
+  - Transaction history
+  - Credit package purchases
 
-   - Use appropriate field types for your data
-   - Consider adding length constraints for String fields
-   - Mark required fields as non-nullable
+- **AI Model Integration**
 
-3. **After Generation**:
+  - Model usage tracking
+  - Usage rates management
+  - Quote enforcement
 
-   - Review generated files
-   - Add custom methods as needed
-   - Create and run migrations
-   - Add tests
+- **Usage Analytics**
+  - Real-time usage tracking
+  - Usage aggregation
+  - Custom reporting
 
-4. **Before Deletion**:
-   - Use --check-only to preview changes
-   - Backup important custom code
-   - Handle database migrations carefully
+## 🛠️ Technology Stack
 
-## Troubleshooting
+- **Backend**: FastAPI
+- **Database**: PostgreSQL
+- **ORM**: SQLAlchemy
+- **Migration**: Alembic
+- **Authentication**: JWT
+- **Task Queue**: Celery
+- **Caching**: Redis
+- **Testing**: pytest
+- **Documentation**: OpenAPI (Swagger)
 
-1. **File Not Found Errors**:
+## 🏗️ Installation
 
-   - Ensure you're running the scripts from project root
-   - Check if directory structure matches expected paths
-
-2. **Type Conversion Errors**:
-
-   - Verify field type is supported
-   - Check field definition format
-
-3. **Migration Issues**:
-
-   - Review migration files before applying
-   - Handle existing data appropriately
-
-4. **Import Errors**:
-   - Ensure all required packages are installed
-   - Check import paths in generated files
-
-## Example Workflow
-
-1. Create a new module:
-
-```bash
-python scripts/create_module.py Product \
-    -f "name:String:false:100" \
-    -f "price:Numeric:false" \
-    -f "description:Text:true"
-```
-
-2. Create and run migration:
-
-```bash
-alembic revision --autogenerate -m "add_product_table"
-alembic upgrade head
-```
-
-3. Test the endpoints:
-
-```bash
-# Create product
-curl -X POST "http://localhost:8000/api/v1/products/" \
-     -H "Content-Type: application/json" \
-     -d '{"name": "Test Product", "price": 99.99, "description": "Test Description"}'
-
-# Get products
-curl "http://localhost:8000/api/v1/products/"
-```
-
-4. Delete the module when no longer needed:
-
-```bash
-python scripts/delete_module.py Product --check-only
-python scripts/delete_module.py Product
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/credit-forge.git
+   cd credit-forge
+   ```

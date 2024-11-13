@@ -1,17 +1,3 @@
-# FastAPI Microservice Boilerplate
-
-A production-ready FastAPI boilerplate with async SQLAlchemy, structured for maintainability and scalability.
-
-## Table of Contents
-
-1. [Project Structure](#project-structure)
-2. [Setup and Installation](#setup-and-installation)
-3. [Database Configuration](#database-configuration)
-4. [Creating New APIs](#creating-new-apis)
-5. [Development Workflow](#development-workflow)
-6. [Testing](#testing)
-7. [Deployment](#deployment)
-
 ## Project Structure
 
 ```
@@ -51,102 +37,77 @@ A production-ready FastAPI boilerplate with async SQLAlchemy, structured for mai
 
 ```
 
-## Setup and Installation
+## Core
 
-### Prerequisites
+```python
+# app/core/repository.py
+from typing import Generic, TypeVar, Type, Optional, List, Any
+from sqlalchemy.orm import Session
+from sqlalchemy import select, update, delete, func
+from pydantic import BaseModel
+from app.db.base import Base
 
-- Python 3.9+
-- PostgreSQL
-- Docker (optional)
+ModelType = TypeVar("ModelType", bound=Base)
+CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
-### Local Development Setup
+class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+    def __init__(self, model: Type[ModelType], db: Session):
+        self.model = model
+        self.db = db
 
-1. Clone the repository:
+    async def create(self, schema: CreateSchemaType) -> ModelType:
+        db_obj = self.model(**schema.model_dump(exclude_unset=True))
+        self.db.add(db_obj)
+        await self.db.flush()
+        return db_obj
 
-```bash
-git clone <repository-url>
-cd <project-name>
-```
+    async def get(self, id: Any) -> Optional[ModelType]:
+        stmt = select(self.model).where(self.model.id == id)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
-2. Create and activate virtual environment:
+    async def get_multi(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        filters: dict = None
+    ) -> tuple[List[ModelType], int]:
+        stmt = select(self.model)
 
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+        if filters:
+            for key, value in filters.items():
+                if hasattr(self.model, key) and value is not None:
+                    stmt = stmt.where(getattr(self.model, key) == value)
 
-3. Install dependencies:
+        total = await self.db.scalar(select(func.count()).select_from(stmt))
 
-```bash
-pip install -r requirements.txt
-```
+        stmt = stmt.offset(skip).limit(limit)
+        result = await self.db.execute(stmt)
 
-4. Copy environment example and configure:
+        return result.scalars().all(), total
 
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
+    async def update(
+        self,
+        *,
+        id: Any,
+        schema: UpdateSchemaType
+    ) -> Optional[ModelType]:
+        stmt = (
+            update(self.model)
+            .where(self.model.id == id)
+            .values(**schema.model_dump(exclude_unset=True))
+            .returning(self.model)
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+        return result.scalar_one_or_none()
 
-5. Create database:
-
-```sql
-CREATE DATABASE your_database_name;
-```
-
-6. Run migrations:
-
-```bash
-alembic upgrade head
-```
-
-7. Start the application:
-
-```bash
-uvicorn app.main:app --reload
-```
-
-### Docker Setup
-
-1. Build and run with Docker Compose:
-
-```bash
-docker-compose up --build
-```
-
-## Database Configuration
-
-### Environment Variables
-
-```env
-DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/dbname
-```
-
-### Database Migration Workflow
-
-1. Initial setup:
-
-```bash
-alembic init alembic
-```
-
-2. Create new migration:
-
-```bash
-alembic revision --autogenerate -m "description of changes"
-```
-
-3. Apply migrations:
-
-```bash
-alembic upgrade head
-```
-
-4. Rollback migrations:
-
-```bash
-alembic downgrade -1  # Rollback one migration
-alembic downgrade base  # Rollback all migrations
+    async def delete(self, *, id: Any) -> bool:
+        stmt = delete(self.model).where(self.model.id == id)
+        result = await self.db.execute(stmt)
+        return result.rowcount > 0
 ```
 
 ## Creating New APIs
@@ -172,23 +133,26 @@ class ExampleModel(Base):
 ```python
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict
 
-class ExampleBase(BaseModel):
-    name: str
-
-class ExampleCreate(ExampleBase):
-    pass
-
-class ExampleUpdate(BaseModel):
-    name: Optional[str] = None
-
-class Example(ExampleBase):
-    id: int
+class BaseSchema(PydanticBaseModel):
+    id: UUID
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class ExampleBase(PydanticBaseModel):
+    name: str
+
+class ExampleCreate(PydanticBaseModel):
+    pass
+
+class ExampleUpdate(PydanticBaseModel):
+    pass
+
+class ExampleResponse(BaseSchema):
+    pass
 ```
 
 ### 3. Create Repository (`app/repositories/example.py`)
@@ -254,166 +218,3 @@ from app.api.v1.endpoints import example
 api_router = APIRouter()
 api_router.include_router(example.router, prefix="/examples", tags=["examples"])
 ```
-
-## Development Workflow
-
-1. Create new feature branch:
-
-```bash
-git checkout -b feature/feature-name
-```
-
-2. Make changes and create migration if needed:
-
-```bash
-alembic revision --autogenerate -m "description"
-```
-
-3. Apply migrations:
-
-```bash
-alembic upgrade head
-```
-
-4. Run tests:
-
-```bash
-pytest
-```
-
-5. Commit changes:
-
-```bash
-git add .
-git commit -m "feat: add feature description"
-```
-
-## Testing
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/test_api/test_example.py
-
-# Run with coverage report
-pytest --cov=app tests/
-```
-
-### Example Test File
-
-```python
-# tests/test_api/test_example.py
-import pytest
-from httpx import AsyncClient
-from app.main import app
-
-@pytest.mark.asyncio
-async def test_create_example():
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.post(
-            "/api/v1/examples/",
-            json={"name": "test"}
-        )
-        assert response.status_code == 200
-        assert response.json()["success"] is True
-```
-
-## Deployment
-
-### Docker Deployment
-
-1. Build image:
-
-```bash
-docker build -t app-name .
-```
-
-2. Run container:
-
-```bash
-docker run -p 8000:8000 app-name
-```
-
-### Environment Variables for Production
-
-```env
-PROJECT_NAME=YourProjectName
-VERSION=1.0.0
-API_V1_STR=/api/v1
-DATABASE_URL=postgresql+asyncpg://user:password@host:5432/dbname
-DEBUG=False
-```
-
-## API Documentation
-
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## Best Practices
-
-1. **Code Style**
-
-   - Follow PEP 8
-   - Use type hints
-   - Document functions and classes
-
-2. **API Design**
-
-   - Use appropriate HTTP methods
-   - Implement proper error handling
-   - Follow REST principles
-
-3. **Database**
-
-   - Always create migrations for changes
-   - Use appropriate indexes
-   - Handle transactions properly
-
-4. **Testing**
-   - Write tests for new features
-   - Maintain good test coverage
-   - Use meaningful test names
-
-## Common Issues and Solutions
-
-1. **Migration Issues**
-
-   ```bash
-   # Reset migrations
-   rm -rf alembic/versions/*
-   alembic revision --autogenerate -m "initial"
-   alembic upgrade head
-   ```
-
-2. **Database Connection Issues**
-
-   - Check DATABASE_URL format
-   - Verify database credentials
-   - Ensure database server is running
-
-3. **Import Errors**
-   - Check Python path
-   - Verify virtual environment activation
-   - Check package installation
-
-## Support
-
-For support, please open an issue in the repository or contact the maintainers.
-
-python scripts/create_module.py Category \
- -f "name:String:false:100" \
- -f "description:Text:true" \
- -f "is_active:Boolean:false" \
- -f "parent_id:Integer:true"
