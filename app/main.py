@@ -8,18 +8,19 @@ from app.core.exceptions import (
     APIError,
     api_error_handler,
     validation_error_handler,
-    sqlalchemy_error_handler
+    sqlalchemy_error_handler,
 )
 from app.api.v1.router import api_router
 from app.utils.response_handler import response
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.audit import AuditLogMiddleware
 
+
 def create_application() -> FastAPI:
     application = FastAPI(
         title=settings.PROJECT_NAME,
         version=settings.VERSION,
-        openapi_url=f"{settings.API_V1_STR}/openapi.json"
+        openapi_url=f"{settings.API_V1_STR}/openapi.json",
     )
 
     application.add_middleware(RequestIDMiddleware)
@@ -44,18 +45,17 @@ def create_application() -> FastAPI:
     @application.get("/")
     async def root():
         return response.success(
-            data={"message": "Hello World"},
-            message="Welcome to the API"
+            data={"message": "Hello World"}, message="Welcome to the API"
         )
 
     # Add health check endpoint
     @application.get("/health")
     async def health_check():
         return response.success(
-            data={"status": "healthy"},
-            message="Service is healthy"
+            data={"status": "healthy"}, message="Service is healthy"
         )
 
     return application
+
 
 app = create_application()

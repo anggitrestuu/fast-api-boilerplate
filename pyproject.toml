@@ -1,0 +1,45 @@
+[tool.poetry]
+authors = ["Your Name <your.email@example.com>"]
+description = "Credit Forge API"
+name = "credit-forge"
+version = "1.0.0"
+
+[tool.poetry.dependencies]
+alembic = "^1.12.1"
+asyncpg = "^0.29.0"
+fastapi = "^0.104.1"
+jinja2 = "^3.1.2"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+psycopg2-binary = "^2.9.9"
+pydantic = "^2.5.1"
+pydantic-settings = "^2.1.0"
+python = "^3.11.0"
+python-dateutil = "^2.8.2"
+python-dotenv = "^1.0.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+python-json-logger = "^2.0.7"
+python-multipart = "^0.0.6"
+requests = "^2.31.0"
+sqlalchemy = "^2.0.23"
+uuid7 = "^0.1.0"
+uvicorn = "^0.24.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.11.0"
+flake8 = "^6.1.0"
+isort = "^5.12.0"
+mypy = "^1.7.0"
+pytest = "^7.4.3"
+
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+
+[tool.black]
+include = '\.pyi?$'
+line-length = 88
+target-version = ['py39']
+
+[tool.isort]
+multi_line_output = 3
+profile = "black"

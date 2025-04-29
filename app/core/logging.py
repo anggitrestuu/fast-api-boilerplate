@@ -6,18 +6,25 @@ from datetime import datetime
 from typing import Any
 from pythonjsonlogger import jsonlogger  # Add this to requirements.txt
 
+
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
-    def add_fields(self, log_record: dict[str, Any], record: logging.LogRecord, message_dict: dict[str, Any]) -> None:
+    def add_fields(
+        self,
+        log_record: dict[str, Any],
+        record: logging.LogRecord,
+        message_dict: dict[str, Any],
+    ) -> None:
         super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
-        
+
         # Add timestamp
-        log_record['timestamp'] = datetime.utcnow().isoformat()
-        log_record['level'] = record.levelname
-        log_record['logger'] = record.name
+        log_record["timestamp"] = datetime.utcnow().isoformat()
+        log_record["level"] = record.levelname
+        log_record["logger"] = record.name
 
         # Remove fields that were added to message_dict
-        if 'timestamp' in message_dict:
-            del message_dict['timestamp']
+        if "timestamp" in message_dict:
+            del message_dict["timestamp"]
+
 
 def setup_logging() -> logging.Logger:
     # Create logs directory if it doesn't exist
@@ -28,17 +35,16 @@ def setup_logging() -> logging.Logger:
 
     # Format for JSON logging
     formatter = CustomJsonFormatter(
-        '%(timestamp)s %(level)s %(name)s %(message)s',
-        json_ensure_ascii=False
+        "%(timestamp)s %(level)s %(name)s %(message)s", json_ensure_ascii=False
     )
 
     # File handler for JSON logs
-    json_handler = logging.FileHandler('logs/app.json.log')
+    json_handler = logging.FileHandler("logs/app.json.log")
     json_handler.setFormatter(formatter)
 
     # Console handler with more readable format
     console_formatter = logging.Formatter(
-        '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s'
+        "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s"
     )
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(console_formatter)
@@ -48,5 +54,6 @@ def setup_logging() -> logging.Logger:
     logger.addHandler(console_handler)
 
     return logger
+
 
 logger = setup_logging()

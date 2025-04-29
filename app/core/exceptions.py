@@ -4,17 +4,16 @@ from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from app.schemas.response import Error
 
+
 class APIError(Exception):
     def __init__(
-        self,
-        message: str,
-        status_code: int = 400,
-        errors: list[Error] = None
+        self, message: str, status_code: int = 400, errors: list[Error] = None
     ):
         self.message = message
         self.status_code = status_code
         self.errors = errors
         super().__init__(self.message)
+
 
 async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
     return JSONResponse(
@@ -24,20 +23,23 @@ async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
             "message": exc.message,
             "data": None,
             "meta": None,
-            "errors": [error.model_dump() for error in exc.errors] if exc.errors else None
-        }
+            "errors": (
+                [error.model_dump() for error in exc.errors] if exc.errors else None
+            ),
+        },
     )
 
-async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+
+async def validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     errors = [
         Error(
-            code="VALIDATION_ERROR",
-            message=f"{error['msg']}",
-            field=error["loc"][-1]
+            code="VALIDATION_ERROR", message=f"{error['msg']}", field=error["loc"][-1]
         )
         for error in exc.errors()
     ]
-    
+
     return JSONResponse(
         status_code=422,
         content={
@@ -45,11 +47,14 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
             "message": "Validation error",
             "data": None,
             "meta": None,
-            "errors": [error.model_dump() for error in errors]
-        }
+            "errors": [error.model_dump() for error in errors],
+        },
     )
 
-async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+
+async def sqlalchemy_error_handler(
+    request: Request, exc: SQLAlchemyError
+) -> JSONResponse:
     return JSONResponse(
         status_code=500,
         content={
@@ -57,12 +62,6 @@ async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError) -> JS
             "message": "Database error",
             "data": None,
             "meta": None,
-            "errors": [
-                {
-                    "code": "DATABASE_ERROR",
-                    "message": str(exc),
-                    "field": None
-                }
-            ]
-        }
+            "errors": [{"code": "DATABASE_ERROR", "message": str(exc), "field": None}],
+        },
     )
